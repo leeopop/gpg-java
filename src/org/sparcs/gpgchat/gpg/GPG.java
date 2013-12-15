@@ -1,10 +1,13 @@
 package org.sparcs.gpgchat.gpg;
 
+import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.io.IOUtils;
 
 public class GPG {
 
@@ -40,8 +43,23 @@ public class GPG {
 	public static void main(String[] args) //TODO just for testing
 	{
 		GPG gpg = GPG.getInstance("C:\\Program Files (x86)\\GNU\\GnuPG\\gpg2.exe");
-		System.out.println(gpg.getAllKeys());
-		System.out.println(gpg.getSecretKeys());
+		List<Key> all = gpg.getAllKeys();
+		List<Key> rem = new LinkedList<>();
+		for(Key k : all)
+		{
+			if(!(k.uid.equals("leeopop") || k.uid.equals("elaborate")))
+				rem.add(k);
+		}
+		for(Key k : rem)
+			all.remove(k);
+		System.out.println(all);
+		
+		String message1 = gpg.encrypt("Message", all, null);
+		String message2 = gpg.encrypt("Message", all, all.get(0));
+		String message3 = gpg.encrypt("Message", all, all.get(1));
+		System.out.println(message1);
+		System.out.println(message2);
+		System.out.println(message3);
 	}
 
 	public List<Key> getAllKeys()
@@ -95,8 +113,10 @@ public class GPG {
 			}
 
 			in.close();
-			p.waitFor();
-			return ret;
+			if(p.waitFor() == 0)
+				return ret;
+			else
+				return null;
 		}
 		catch(Exception e)
 		{
@@ -155,8 +175,56 @@ public class GPG {
 			}
 
 			in.close();
-			p.waitFor();
-			return ret;
+			if(p.waitFor() == 0)
+				return ret;
+			else
+				return null;
+		}
+		catch(Exception e)
+		{
+			return null;
+		}
+	}
+
+	public String encrypt(String message, List<Key> receivers, Key signKey)
+	{
+		try
+		{
+			int base = 5;
+			if(signKey != null)
+				base = 10;
+			String [] command = new String[receivers.size()*2 + base];
+			command[0] = gpg;
+			command[1] = "--armor";
+			command[2] = "--cipher-algo";
+			command[3] = "AES256";
+			command[4] = "--encrypt";
+			
+			if(signKey != null)
+			{
+				command[5] = "--sign";
+				command[6] = "--digest-algo";
+				command[7] = "SHA512";
+				command[8] = "--default-key";
+				command[9] = signKey.keyID;
+			}
+			for(int k=0; k<receivers.size(); k++)
+			{
+				command[base+k*2] = "--recipient";
+				command[base+1+k*2] = receivers.get(k).keyID;
+			}
+
+			Process p = Runtime.getRuntime().exec(command);
+			OutputStream out = p.getOutputStream();
+			out.write(message.getBytes("UTF-8"));
+			out.close();
+			
+			String result = IOUtils.toString(p.getInputStream(), "UTF-8");
+			
+			if(p.waitFor() == 0)
+				return result;
+			else
+				return null;
 		}
 		catch(Exception e)
 		{
