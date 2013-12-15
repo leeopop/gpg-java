@@ -47,7 +47,7 @@ public class GPG {
 	{
 		try
 		{
-			Pattern pubPattern = Pattern.compile("pub\\s+\\w+/(\\w+)\\s+.*");
+			Pattern keyIDPattern = Pattern.compile("pub\\s+\\w+/(\\w+)\\s+.*");
 			Pattern uidPattern = Pattern.compile("uid\\s+(\\S+[^<>]*\\S+)\\s+<([^<>]*)>.*");
 
 
@@ -59,7 +59,7 @@ public class GPG {
 			Process p = Runtime.getRuntime().exec(command);
 
 			Scanner in = new Scanner(p.getInputStream());
-			String pub = null;
+			String keyID = null;
 			String uid = null;
 			String email = null;
 			while(in.hasNextLine())
@@ -67,22 +67,22 @@ public class GPG {
 				String data = in.nextLine();
 				if(data.length() == 0)
 				{
-					if (pub == null)
+					if (keyID == null)
 						break;
 					Key k = new Key();
-					k.pub = pub;
+					k.keyID = keyID;
 					k.uid = uid;
 					k.email = email;
 					ret.add(k);
-					pub = null;
+					keyID = null;
 					uid = null;
 					email = null;
 				}
 
-				Matcher m = pubPattern.matcher(data);
-				if(pub == null && m.matches())
+				Matcher m = keyIDPattern.matcher(data);
+				if(keyID == null && m.matches())
 				{
-					pub = m.group(1);
+					keyID = m.group(1);
 				}
 
 				m = uidPattern.matcher(data);
