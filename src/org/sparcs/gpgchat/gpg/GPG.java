@@ -41,6 +41,7 @@ public class GPG {
 	{
 		GPG gpg = GPG.getInstance("C:\\Program Files (x86)\\GNU\\GnuPG\\gpg2.exe");
 		System.out.println(gpg.getAllKeys());
+		System.out.println(gpg.getSecretKeys());
 	}
 
 	public List<Key> getAllKeys()
@@ -55,6 +56,66 @@ public class GPG {
 			String [] command = new String[2];
 			command[0] = gpg;
 			command[1] = "--list-keys";
+
+			Process p = Runtime.getRuntime().exec(command);
+
+			Scanner in = new Scanner(p.getInputStream());
+			String keyID = null;
+			String uid = null;
+			String email = null;
+			while(in.hasNextLine())
+			{
+				String data = in.nextLine();
+				if(data.length() == 0)
+				{
+					if (keyID == null)
+						break;
+					Key k = new Key();
+					k.keyID = keyID;
+					k.uid = uid;
+					k.email = email;
+					ret.add(k);
+					keyID = null;
+					uid = null;
+					email = null;
+				}
+
+				Matcher m = keyIDPattern.matcher(data);
+				if(keyID == null && m.matches())
+				{
+					keyID = m.group(1);
+				}
+
+				m = uidPattern.matcher(data);
+				if(uid == null && m.matches())
+				{
+					uid = m.group(1);
+					email = m.group(2);
+				}
+			}
+
+			in.close();
+			p.waitFor();
+			return ret;
+		}
+		catch(Exception e)
+		{
+			return null;
+		}
+	}
+	
+	public List<Key> getSecretKeys()
+	{
+		try
+		{
+			Pattern keyIDPattern = Pattern.compile("sec\\s+\\w+/(\\w+)\\s+.*");
+			Pattern uidPattern = Pattern.compile("uid\\s+(\\S+[^<>]*\\S+)\\s+<([^<>]*)>.*");
+
+
+			List<Key> ret = new LinkedList<>();
+			String [] command = new String[2];
+			command[0] = gpg;
+			command[1] = "--list-secret-keys";
 
 			Process p = Runtime.getRuntime().exec(command);
 
