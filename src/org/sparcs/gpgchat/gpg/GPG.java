@@ -71,7 +71,7 @@ public class GPG {
 		{
 			if(!(k.uid.equals("leeopop") || k.uid.equals("elaborate")))
 				rem.add(k);
-			if(k.uid.equals("leeopop"))
+			if(k.uid.equals("invalid"))
 				me = k;
 		}
 		for(Key k : rem)
@@ -81,6 +81,8 @@ public class GPG {
 		String temp = "ASDF";
 		String message1 = gpg.encrypt(temp, all, me);
 		System.out.println(message1);
+		
+		System.out.println(gpg.verify(message1));
 	}
 
 	public List<Key> getAllKeys()
@@ -97,7 +99,7 @@ public class GPG {
 
 			Process p = this.runCommand(list);
 			
-			Scanner in = new Scanner(p.getInputStream());
+			Scanner in = new Scanner(p.getInputStream(), "UTF-8");
 			String keyID = null;
 			String uid = null;
 			String email = null;
@@ -158,7 +160,7 @@ public class GPG {
 
 			Process p = this.runCommand(list);
 
-			Scanner in = new Scanner(p.getInputStream());
+			Scanner in = new Scanner(p.getInputStream(), "UTF-8");
 			String keyID = null;
 			String uid = null;
 			String email = null;
@@ -238,6 +240,105 @@ public class GPG {
 			
 			if(p.waitFor() == 0)
 				return result;
+			else
+				return null;
+		}
+		catch(Exception e)
+		{
+			return null;
+		}
+	}
+	
+	public String verify(String message)
+	{
+		try
+		{
+			List<String> list = new LinkedList<String>();
+			list.add("--decrypt");
+
+			Process p = this.runCommand(list);
+			OutputStream out = p.getOutputStream();
+			out.write(message.getBytes("UTF-8"));
+			out.close();
+			
+			String result = IOUtils.toString(p.getInputStream(), "UTF-8");
+			Scanner in = new Scanner(p.getErrorStream(),"UTF-8");
+			
+			Pattern keyIDPattern = Pattern.compile("gpg:\\s+Signature\\s+made\\s+.*\\s+ID\\s+(\\w+)");
+			Pattern signaturePattern = Pattern.compile("gpg:\\s+(\\w+)\\s+signature\\s+from\\s+\"(\\w+)\\s+<(\\S+)>\"");
+			Pattern statusPattern = Pattern.compile("gpg:\\s+(\\w+):\\s+.*");
+			int state = 0;
+			String key = null;
+			String signature = null;
+			String name = null;
+			String status = null;
+			while(in.hasNextLine())
+			{
+				String line = in.nextLine().trim();
+				if(line.length()==0)
+					continue;
+				switch(state)
+				{
+				case 0:
+				{
+					Matcher m = keyIDPattern.matcher(line);
+					if(m.matches())
+					{
+						key = m.group(1);
+						state++;
+					}
+					break;
+				}
+				case 1:
+				{
+					Matcher m = signaturePattern.matcher(line);
+
+					
+					if(m.matches())
+					{
+						signature = m.group(1);
+						name = m.group(2);
+						if(signature.equals("Good"))
+							state++;
+						else
+							state=-1;
+					}
+					else
+						state=-1;
+					break;
+				}
+				case 2:
+				{
+					Matcher m = statusPattern.matcher(line);
+
+					
+					if(m.matches())
+					{
+						System.err.println(line);
+						status = m.group(1);
+						state=-1;
+					}
+					else
+						state=3;
+					break;
+				}
+				}
+				if(state == -1 || state==3)
+					break;
+			}
+			in.close();
+			
+			if(p.waitFor() == 0)
+			{
+				System.err.println(key);
+				System.err.println(signature);
+				System.err.println(name);
+				System.err.println(status);
+				if(state == -1)
+					return null;
+				else
+					return result;
+			}
 			else
 				return null;
 		}
