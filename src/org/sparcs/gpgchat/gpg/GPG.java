@@ -1,6 +1,7 @@
 package org.sparcs.gpgchat.gpg;
 
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
@@ -17,49 +18,69 @@ public class GPG {
 	{
 		this.gpg = gpg;
 	}
+	
+	private Process runCommand(List<String> args)
+	{
+		try
+		{
+			ArrayList<String> cmd = new ArrayList<>();
+			cmd.add(this.gpg);
+			cmd.add("--batch");
+			cmd.add("--no-tty");
+			cmd.addAll(args);
+
+			String[] array = cmd.toArray(new String[cmd.size()]);
+			Process gpg = Runtime.getRuntime().exec(array);
+			return gpg;
+		}
+		catch(Exception e)
+		{
+			return null;
+		}
+	}
 
 	public static GPG getInstance(String path)
 	{
 		try
 		{
-			if(path == null)
+			if(path == null || path.length() == 0)
 				path = "gpg";
-			String [] command = new String[2];
-			command[0] = path;
-			command[1] = "--version";
-			Process gpg = Runtime.getRuntime().exec(command);
+			List<String> list = new LinkedList<String>();
+			list.add("--version");
+			GPG ret = new GPG(path);
+			Process gpg = ret.runCommand(list);
 			if(gpg.waitFor() == 0)
-				return new GPG(command[0]);
+				return ret;
 			else
 				return null;
 		}
 		catch(Exception e)
 		{
-			//e.printStackTrace();
+			e.printStackTrace();
 			return null;
 		}
 	}
 
 	public static void main(String[] args) //TODO just for testing
 	{
-		GPG gpg = GPG.getInstance("C:\\Program Files (x86)\\GNU\\GnuPG\\gpg2.exe");
+		GPG gpg = GPG.getInstance(null);
 		List<Key> all = gpg.getAllKeys();
 		List<Key> rem = new LinkedList<>();
+		Key me = null;
 		for(Key k : all)
 		{
 			if(!(k.uid.equals("leeopop") || k.uid.equals("elaborate")))
 				rem.add(k);
+			if(k.uid.equals("leeopop"))
+				me = k;
 		}
 		for(Key k : rem)
 			all.remove(k);
 		System.out.println(all);
 		
-		String message1 = gpg.encrypt("Message", all, null);
-		String message2 = gpg.encrypt("Message", all, all.get(0));
-		String message3 = gpg.encrypt("Message", all, all.get(1));
+		String temp = "ASDF";
+		String message1 = gpg.encrypt(temp, all, me);
 		System.out.println(message1);
-		System.out.println(message2);
-		System.out.println(message3);
 	}
 
 	public List<Key> getAllKeys()
@@ -71,12 +92,11 @@ public class GPG {
 
 
 			List<Key> ret = new LinkedList<>();
-			String [] command = new String[2];
-			command[0] = gpg;
-			command[1] = "--list-keys";
+			List<String> list = new LinkedList<String>();
+			list.add("--list-keys");
 
-			Process p = Runtime.getRuntime().exec(command);
-
+			Process p = this.runCommand(list);
+			
 			Scanner in = new Scanner(p.getInputStream());
 			String keyID = null;
 			String uid = null;
@@ -133,11 +153,10 @@ public class GPG {
 
 
 			List<Key> ret = new LinkedList<>();
-			String [] command = new String[2];
-			command[0] = gpg;
-			command[1] = "--list-secret-keys";
+			List<String> list = new LinkedList<String>();
+			list.add("--list-secret-keys");
 
-			Process p = Runtime.getRuntime().exec(command);
+			Process p = this.runCommand(list);
 
 			Scanner in = new Scanner(p.getInputStream());
 			String keyID = null;
@@ -190,31 +209,27 @@ public class GPG {
 	{
 		try
 		{
-			int base = 5;
-			if(signKey != null)
-				base = 10;
-			String [] command = new String[receivers.size()*2 + base];
-			command[0] = gpg;
-			command[1] = "--armor";
-			command[2] = "--cipher-algo";
-			command[3] = "AES256";
-			command[4] = "--encrypt";
+			List<String> list = new LinkedList<String>();
+			list.add("--armor");
+			list.add("--cipher-algo");
+			list.add("AES256");
+			list.add("--encrypt");
 			
 			if(signKey != null)
 			{
-				command[5] = "--sign";
-				command[6] = "--digest-algo";
-				command[7] = "SHA512";
-				command[8] = "--default-key";
-				command[9] = signKey.keyID;
+				list.add("--sign");
+				list.add("--digest-algo");
+				list.add("SHA512");
+				list.add("--default-key");
+				list.add(signKey.keyID);
 			}
 			for(int k=0; k<receivers.size(); k++)
 			{
-				command[base+k*2] = "--recipient";
-				command[base+1+k*2] = receivers.get(k).keyID;
+				list.add("--recipient");
+				list.add(receivers.get(k).keyID);
 			}
 
-			Process p = Runtime.getRuntime().exec(command);
+			Process p = this.runCommand(list);
 			OutputStream out = p.getOutputStream();
 			out.write(message.getBytes("UTF-8"));
 			out.close();
