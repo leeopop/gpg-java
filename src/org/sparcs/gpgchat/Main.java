@@ -23,7 +23,7 @@ public class Main {
 	public static void main(String[] args) {
 		GPG gpg = GPG.getInstance(null);
 		
-		IRCInterface irc = IRCInterface.getInstance(gpg, "irc.luatic.net", 6661, "#ella", null, new SimpleListener());
+		IRCInterface irc = IRCInterface.getInstance(gpg, "irc.ozinger.org", 6661, "#ella", null, new SimpleListener());
 		Scanner in = new Scanner(System.in);
 		System.out.print("Your private key id: ");
 		String me = in.nextLine();

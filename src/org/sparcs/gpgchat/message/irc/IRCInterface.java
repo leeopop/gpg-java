@@ -21,7 +21,7 @@ import org.sparcs.gpgchat.message.MessageInterface;
 import org.sparcs.gpgchat.message.MessageReceiver;
 
 public class IRCInterface implements MessageInterface, IRCEventListener {
-	private static final int MAX_LEN = 200;
+	private static final int MAX_LEN = 100;
 	
 	private ConnectionManager conn;
 	private String initialMessage;
@@ -235,7 +235,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			String channelData = lineMatcher.group(2);
 
 			Matcher pgpMatcher = pgp.matcher(channelData);
-			if(pgpMatcher.matches())
+			if(pgpMatcher.matches() && !channelName.equals(this.channelName))
 			{
 				this.createChannel(channelName);
 			}
