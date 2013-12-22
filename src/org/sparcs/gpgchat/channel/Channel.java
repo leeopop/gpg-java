@@ -45,25 +45,29 @@ public class Channel implements MessageInterface, MessageReceiver {
 
 	private Map<String, UserKeyMap> userKeyMap = new HashMap<String, UserKeyMap>();
 
-	public Channel(MessageInterface messager, GPG gpg) throws NoSuchAlgorithmException,
-			NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
-		this.messager = messager;
-		this.gpg = gpg;
+	public Channel(MessageInterface messager, GPG gpg) {
+		try {
+			this.messager = messager;
+			this.gpg = gpg;
 
-		Random r = new SecureRandom();
-		r.nextBytes(key);
-		r.nextBytes(ivKey);
+			Random r = new SecureRandom();
+			r.nextBytes(key);
+			r.nextBytes(ivKey);
 
-		this.encrypter = Cipher.getInstance(transformation);
-		IvParameterSpec iv = new IvParameterSpec(ivKey);
+			this.encrypter = Cipher.getInstance(transformation);
+			IvParameterSpec iv = new IvParameterSpec(ivKey);
 
-		SecretKeySpec k = new SecretKeySpec(key, "AES");
-		this.encrypter.init(Cipher.ENCRYPT_MODE, k, iv);
+			SecretKeySpec k = new SecretKeySpec(key, "AES");
+			this.encrypter.init(Cipher.ENCRYPT_MODE, k, iv);
 
-		this.fakeID = Long.toHexString(r.nextLong());
+			this.fakeID = Long.toHexString(r.nextLong());
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
-	public static Channel createChannel(MessageInterface messager, GPG gpg) throws Exception {
+	public static Channel createChannel(MessageInterface messager, GPG gpg) {
 		return new Channel(messager, gpg);
 	}
 
