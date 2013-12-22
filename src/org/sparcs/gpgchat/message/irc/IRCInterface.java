@@ -15,6 +15,8 @@ import jerklib.events.JoinCompleteEvent;
 import jerklib.events.MessageEvent;
 import jerklib.listeners.IRCEventListener;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 import org.sparcs.gpgchat.channel.Channel;
 import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.message.MessageInterface;
@@ -82,7 +84,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			System.err.println("Channel not configured yet");
 			return;
 		}
-		message = message.replaceAll("[\r\n]", "");
+		message = Base64.encodeBase64String(StringUtils.getBytesUtf8(message));
 		message = "GPGChannelData:" + this.channelName + ": " + message;
 		int remaining = message.length();
 		int current = 0;
@@ -199,6 +201,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 					buffer.append(content);
 					String result = buffer.toString();
 					buffer.delete(0, buffer.length());
+					result = StringUtils.newStringUtf8(Base64.decodeBase64(result));
 					this.processMessage(result);
 					break;
 				}
