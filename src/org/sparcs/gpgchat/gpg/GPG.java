@@ -14,15 +14,27 @@ public class GPG {
 
 	private String gpg;
 	private Key myKey = null;
+	private List<Key> trust;
 	
 	public void setDefaultKey(Key key)
 	{
 		myKey = key;
 	}
+	
+	public void addTrustedKey(Key key)
+	{
+		this.trust.add(key);
+	}
 
+	public List<Key> getTruestedKey()
+	{
+		return trust;
+	}
+	
 	private GPG(String gpg)
 	{
 		this.gpg = gpg;
+		this.trust = new LinkedList<>();
 	}
 	
 	private Process runCommand(List<String> args)

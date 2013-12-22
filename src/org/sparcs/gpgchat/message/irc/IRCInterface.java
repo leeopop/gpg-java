@@ -1,5 +1,6 @@
 package org.sparcs.gpgchat.message.irc;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -19,10 +20,8 @@ import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.message.MessageInterface;
 import org.sparcs.gpgchat.message.MessageReceiver;
 
-import java.security.SecureRandom;
-
 public class IRCInterface implements MessageInterface, IRCEventListener {
-	private static final int MAX_LEN = 128;
+	private static final int MAX_LEN = 200;
 	
 	private ConnectionManager conn;
 	private String initialMessage;
@@ -32,8 +31,9 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	private Map<String, StringBuffer> channelBuffer;
 	private jerklib.Channel IRCChannel;
 	private GPG gpg;
+	MessageReceiver messageListener;
 	
-	private IRCInterface(GPG gpg, ConnectionManager conn, String channel, String initialMessage)
+	private IRCInterface(GPG gpg, ConnectionManager conn, String channel, String initialMessage, MessageReceiver messageListener)
 	{
 		this.conn = conn;
 		this.initialMessage = initialMessage;
@@ -42,9 +42,10 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		this.listener = null;
 		this.channelName = null;
 		this.gpg = gpg;
+		this.messageListener = messageListener;
 	}
 	
-	public static IRCInterface getInstance(GPG gpg, String host, int port, String channel, String channelID, String initialMessage)
+	public static IRCInterface getInstance(GPG gpg, String host, int port, String channelID, String initialMessage, MessageReceiver messageListener)
 	{
 		Random r = new SecureRandom();
 		String id = Long.toHexString(r.nextLong());
@@ -55,7 +56,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		else
 			session = conn.requestConnection(host);
 		
-		IRCInterface ret = new IRCInterface(gpg, conn, channelID, initialMessage);
+		IRCInterface ret = new IRCInterface(gpg, conn, channelID, initialMessage, messageListener);
 		session.addIRCEventListener(ret);
 		return ret;
 	}
@@ -81,13 +82,14 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			System.err.println("Channel not configured yet");
 			return;
 		}
+		message = message.replaceAll("[\r\n]", "");
 		message = "GPGChannelData:" + this.channelName + ": " + message;
 		int remaining = message.length();
 		int current = 0;
 		while(remaining > 0)
 		{
 			int readLen = remaining > MAX_LEN ? MAX_LEN : remaining;
-			String part = message.substring(current, readLen);
+			String part = message.substring(current, current + readLen);
 			remaining -= readLen;
 			String mode = "GPGChat:";
 			if(remaining == 0)
@@ -111,7 +113,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		this.listener = receiver;
 	}
 	
-	public boolean createChannel(String name)
+	public Channel createChannel(String name)
 	{
 		if(name == null)
 		{
@@ -121,11 +123,13 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		else
 			this.channelName = name;
 		try {
-			Channel.createChannel(this, gpg);
-			return true;
+			Channel channel = Channel.createChannel(this, gpg);
+			channel.registerReceiver(this.messageListener);
+			channel.sendHello(gpg.getTruestedKey());
+			return channel;
 		} catch (Exception e) {
 			e.printStackTrace();
-			return false;
+			return null;
 		}
 	}
 

@@ -1,5 +1,6 @@
 package org.sparcs.gpgchat.channel;
 
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +19,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.codec.binary.Base64;
 import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.gpg.Key;
 import org.sparcs.gpgchat.message.MessageInterface;
@@ -33,8 +35,8 @@ public class Channel implements MessageInterface, MessageReceiver {
 	public Pattern keyPattern = Pattern.compile("(\\w+):(\\w+):(\\w+)");
 	public Pattern helloPattern = Pattern.compile("hello:(\\w+)");
 
-	private byte[] key = new byte[32];
-	private byte[] ivKey = new byte[32];
+	private byte[] key = new byte[16];
+	private byte[] ivKey = new byte[16];
 	private Cipher encrypter;
 	private String fakeID;
 
@@ -55,6 +57,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 			r.nextBytes(ivKey);
 
 			this.encrypter = Cipher.getInstance(transformation);
+			
 			IvParameterSpec iv = new IvParameterSpec(ivKey);
 
 			SecretKeySpec k = new SecretKeySpec(key, "AES");
@@ -133,7 +136,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 	@Override
 	public void sendMessage(String message) {
 		try {
-			String encyptMessage = new String(this.encrypter.doFinal(message.getBytes()));
+			String encyptMessage = Base64.encodeBase64String(this.encrypter.doFinal(message.getBytes("UTF-8")));
 			this.messager.sendMessage(String.format(msgFormat, this.fakeID, encyptMessage));
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -194,9 +197,9 @@ class UserKeyMap {
 
 	public String decrypt(String encryptedMsg) throws IllegalBlockSizeException {
 		try {
-			byte[] decyptedByte = decrypter.doFinal(encryptedMsg.getBytes());
-			return new String(decyptedByte);
-		} catch (BadPaddingException e) {
+			byte[] decyptedByte = decrypter.doFinal(Base64.decodeBase64(encryptedMsg));
+			return new String(decyptedByte, "UTF-8");
+		} catch (BadPaddingException | UnsupportedEncodingException e) {
 			return null;
 		}
 	}
