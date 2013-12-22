@@ -84,8 +84,8 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			System.err.println("Channel not configured yet");
 			return;
 		}
-		message = Base64.encodeBase64String(StringUtils.getBytesUtf8(message));
 		message = "GPGChannelData:" + this.channelName + ": " + message;
+		message = Base64.encodeBase64String(StringUtils.getBytesUtf8(message));
 		int remaining = message.length();
 		int current = 0;
 		while(remaining > 0)
