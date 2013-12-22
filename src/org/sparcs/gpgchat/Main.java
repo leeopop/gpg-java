@@ -16,7 +16,7 @@ public class Main {
 		@Override
 		public void receiveMessage(String message) {
 			// TODO Auto-generated method stub
-			System.out.println(message);
+			System.err.println(message);
 		}
 		
 	}
@@ -24,18 +24,18 @@ public class Main {
 	public static void main(String[] args) {
 		GPG gpg = GPG.getInstance(null);
 		
-		for(Key key : gpg.getSecretKeys())
+		for(Key key : gpg.getAllKeys())
 		{
 			if(key.uid.equals("leeopop"))
 			{
 				gpg.setDefaultKey(key);
-				gpg.addTrustedKey(key);
 			}
-			
+			if(key.uid.equals("elaborate"))
+				gpg.addTrustedKey(key);
 		}
 		
 		
-		IRCInterface irc = IRCInterface.getInstance(gpg, "irc.ozinger.org", 0, "#ella", null, new SimpleListener());
+		IRCInterface irc = IRCInterface.getInstance(gpg, "irc.luatic.net", 6661, "#ella", null, new SimpleListener());
 		boolean first = true;
 		Scanner in = new Scanner(System.in);
 		Channel channel = null;

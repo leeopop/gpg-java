@@ -48,7 +48,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	public static IRCInterface getInstance(GPG gpg, String host, int port, String channelID, String initialMessage, MessageReceiver messageListener)
 	{
 		Random r = new SecureRandom();
-		String id = Long.toHexString(r.nextLong());
+		String id = "a" + Long.toOctalString(r.nextLong());
 		ConnectionManager conn = new ConnectionManager(new Profile(id));
 		Session session = null;
 		if(port > 0)
@@ -214,6 +214,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		default:
 			break;
 		}
+		System.out.println(rawEvent.getRawEventData());
 	}
 	
 	private void processMessage(String content)
