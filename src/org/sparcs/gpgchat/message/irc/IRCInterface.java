@@ -15,6 +15,7 @@ import jerklib.events.MessageEvent;
 import jerklib.listeners.IRCEventListener;
 
 import org.sparcs.gpgchat.channel.Channel;
+import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.message.MessageInterface;
 import org.sparcs.gpgchat.message.MessageReceiver;
 
@@ -26,20 +27,24 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	private ConnectionManager conn;
 	private String initialMessage;
 	private String IRCChannelName;
-	private Channel channel;
+	private MessageReceiver listener;
+	private String channelName;
 	private Map<String, StringBuffer> channelBuffer;
 	private jerklib.Channel IRCChannel;
+	private GPG gpg;
 	
-	private IRCInterface(ConnectionManager conn, String channel, String initialMessage)
+	private IRCInterface(GPG gpg, ConnectionManager conn, String channel, String initialMessage)
 	{
 		this.conn = conn;
 		this.initialMessage = initialMessage;
 		this.IRCChannelName = channel;
 		this.channelBuffer = new HashMap<>();
-		this.channel = null;
+		this.listener = null;
+		this.channelName = null;
+		this.gpg = gpg;
 	}
 	
-	public static IRCInterface getInstance(String host, int port, String channel, String channelID, String initialMessage)
+	public static IRCInterface getInstance(GPG gpg, String host, int port, String channel, String channelID, String initialMessage)
 	{
 		Random r = new SecureRandom();
 		String id = Long.toHexString(r.nextLong());
@@ -50,7 +55,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		else
 			session = conn.requestConnection(host);
 		
-		IRCInterface ret = new IRCInterface(conn, channelID, initialMessage);
+		IRCInterface ret = new IRCInterface(gpg, conn, channelID, initialMessage);
 		session.addIRCEventListener(ret);
 		return ret;
 	}
@@ -71,11 +76,12 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	
 	@Override
 	public synchronized void sendMessage(String message) {
-		if(this.channel == null)
+		if(this.channelName == null)
 		{
 			System.err.println("Channel not configured yet");
 			return;
 		}
+		message = "GPGChannelData:" + this.channelName + ": " + message;
 		int remaining = message.length();
 		int current = 0;
 		while(remaining > 0)
@@ -102,13 +108,25 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 
 	@Override
 	public void registerReceiver(MessageReceiver receiver) {
-		// TODO Auto-generated method stub
-
+		this.listener = receiver;
 	}
 	
-	public Channel createChannel()
+	public boolean createChannel(String name)
 	{
-		return null;
+		if(name == null)
+		{
+			Random r = new SecureRandom();
+			this.channelName = Long.toHexString(r.nextLong());
+		}
+		else
+			this.channelName = name;
+		try {
+			Channel.createChannel(this, gpg);
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 
 	@Override
@@ -205,17 +223,18 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			String channelName = lineMatcher.group(1);
 			String channelData = lineMatcher.group(2);
 			
-			if(this.channel == null)
+			if(this.channelName == null)
 			{
 				Matcher pgpMatcher = pgp.matcher(channelData);
 				if(pgpMatcher.matches())
 				{
-					//TODO ask and join channel
+					this.createChannel(channelName);
 				}
 			}
-			else if(this.channel.equals(channelName)) //TODO channel -> channelName
+			
+			if(this.listener != null && this.channelName != null && this.channelName.equals(channelName))
 			{
-				//TODO pass message
+				this.listener.receiveMessage(channelData);
 			}
 		}
 	}

@@ -334,8 +334,6 @@ public class GPG {
 						System.err.println(line);
 						state=-1;
 					}
-					else
-						state=3;
 					break;
 				}
 				}
@@ -346,9 +344,7 @@ public class GPG {
 			
 			if(p.waitFor() == 0)
 			{
-				if(state == -1)
-					return null;
-				else
+				if(state == 2)
 				{
 					String[] ret = new String[4];
 					ret[0] = result;
@@ -357,6 +353,8 @@ public class GPG {
 					ret[3] = email;
 					return ret;
 				}
+				else
+					return null;
 			}
 			else
 				return null;
