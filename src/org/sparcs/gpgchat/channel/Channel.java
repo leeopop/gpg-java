@@ -119,16 +119,16 @@ public class Channel implements MessageInterface, MessageReceiver {
 		String userKeyStr = keyMatcher.group(2);
 		String ivStr = keyMatcher.group(3);
 		String realName = gpgProfile[2];
-		byte[] userKey = userKeyStr.getBytes();
-		byte[] ivKey = ivStr.getBytes();
+		byte[] userKey = Base64.decodeBase64(userKeyStr);
+		byte[] ivKey = Base64.decodeBase64(ivStr);
 
 		UserKeyMap userMapKey = new UserKeyMap(realName, userKey, ivKey);
 		userKeyMap.put(fakeID, userMapKey);
 	}
 
 	public void sendHello(List<Key> receivers) {
-		String keyStr = new String(this.key);
-		String ivStr = new String(this.ivKey);
+		String keyStr = Base64.encodeBase64String(this.key);
+		String ivStr = Base64.encodeBase64String(this.ivKey);
 		String helloMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr);
 
 		this.messager.sendMessage(gpg.encrypt(helloMessage, receivers, null));
