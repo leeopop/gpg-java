@@ -20,6 +20,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.gpg.Key;
 import org.sparcs.gpgchat.message.MessageInterface;
@@ -103,7 +104,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 		}
 		String encryptedKey = helloMatcher.group(1);
 
-		String[] gpgProfile = this.gpg.decrypt(encryptedKey);
+		String[] gpgProfile = this.gpg.decrypt(StringUtils.newStringUtf8(Base64.decodeBase64(encryptedKey)));
 		if (gpgProfile == null) {
 			// un-trusted user's message
 			return;
@@ -130,7 +131,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 		String keyStr = Base64.encodeBase64String(this.key);
 		String ivStr = Base64.encodeBase64String(this.ivKey);
 		String keyMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr);
-		String helloMessage = String.format(helloFormat, gpg.encrypt(keyMessage, receivers, null));
+		String helloMessage = String.format(helloFormat, Base64.encodeBase64String(StringUtils.getBytesUtf8(gpg.encrypt(keyMessage, receivers, null))));
 		
 
 		this.messager.sendMessage(helloMessage);

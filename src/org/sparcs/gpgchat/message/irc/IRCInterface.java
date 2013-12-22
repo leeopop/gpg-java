@@ -86,7 +86,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			return;
 		}
 		message = "GPGChannelData:" + this.channelName + ": " + message;
-		message = Base64.encodeBase64String(StringUtils.getBytesUtf8(message));
+		message = message.replaceAll("[\r\n]+", "");
 		int remaining = message.length();
 		int current = 0;
 		while(remaining > 0)
