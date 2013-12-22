@@ -221,7 +221,6 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		default:
 			break;
 		}
-		System.out.println(rawEvent.getRawEventData());
 	}
 	
 	private void processMessage(String content)
