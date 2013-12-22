@@ -5,6 +5,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.regex.Matcher;
@@ -18,6 +19,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.sparcs.gpgchat.gpg.GPG;
+import org.sparcs.gpgchat.gpg.Key;
 import org.sparcs.gpgchat.message.MessageInterface;
 import org.sparcs.gpgchat.message.MessageReceiver;
 
@@ -25,9 +27,11 @@ public class Channel implements MessageInterface, MessageReceiver {
 
 	public static String transformation = "AES/CBC/PKCS5Padding";
 	public static String msgFormat = "message:%s:%s";
-	public static String helloFormat = "hello:%s:%s:%s";
-	public Pattern msgPattern = Pattern.compile("message:([^()]+):(.*)");
-	public Pattern helloPattern = Pattern.compile("hello:([^()]+):([^()]+):([^()]+)");
+	public static String helloFormat = "hello:%s:%s";
+	public static String keyFormat = "%s:%s:%s";
+	public Pattern msgPattern = Pattern.compile("message:(\\w+):(\\w+)");
+	public Pattern keyPattern = Pattern.compile("(\\w+):(\\w+):(\\w+)");
+	public Pattern helloPattern = Pattern.compile("hello:(\\w+)");
 
 	private byte[] key = new byte[32];
 	private byte[] ivKey = new byte[32];
@@ -84,21 +88,28 @@ public class Channel implements MessageInterface, MessageReceiver {
 	public void addUser(String encyptedHelloMessage) throws InvalidKeyException,
 			NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
 
-		String[] gpgProfile = this.gpg.decrypt(encyptedHelloMessage);
+		Matcher helloMatcher = helloPattern.matcher(encyptedHelloMessage);
+		if (!helloMatcher.find()) {
+			// invalid format message
+			return;
+		}
+		String encryptedKey = helloMatcher.group(1);
+
+		String[] gpgProfile = this.gpg.decrypt(encryptedKey);
 		if (gpgProfile == null) {
 			// un-trusted user's message
 			return;
 		}
 
-		Matcher matcher = helloPattern.matcher(gpgProfile[0]);
-		if (!matcher.find()) {
+		Matcher keyMatcher = keyPattern.matcher(gpgProfile[0]);
+		if (!keyMatcher.find()) {
 			// invalid format message
 			return;
 		}
 
-		String fakeID = matcher.group(1);
-		String userKeyStr = matcher.group(2);
-		String ivStr = matcher.group(3);
+		String fakeID = keyMatcher.group(1);
+		String userKeyStr = keyMatcher.group(2);
+		String ivStr = keyMatcher.group(3);
 		String realName = gpgProfile[2];
 		byte[] userKey = userKeyStr.getBytes();
 		byte[] ivKey = ivStr.getBytes();
@@ -107,13 +118,12 @@ public class Channel implements MessageInterface, MessageReceiver {
 		userKeyMap.put(fakeID, userMapKey);
 	}
 
-	public void sendHello() {
+	public void sendHello(List<Key> receivers) {
 		String keyStr = new String(this.key);
 		String ivStr = new String(this.ivKey);
-		String helloMessage = String.format(helloFormat, this.fakeID, keyStr, ivStr);
-		// TODO
-		// encrypted user message from gpg
-		this.messager.sendMessage(helloMessage);
+		String helloMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr);
+
+		this.messager.sendMessage(gpg.encrypt(helloMessage, receivers, null));
 	}
 
 	@Override
