@@ -208,7 +208,6 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 					buffer.append(content);
 					String result = buffer.toString();
 					buffer.delete(0, buffer.length());
-					result = StringUtils.newStringUtf8(Base64.decodeBase64(result));
 					this.processMessage(result);
 					break;
 				}
