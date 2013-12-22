@@ -176,7 +176,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			}
 			
 			String message = event.getMessage();
-			Pattern line = Pattern.compile("GPGChat:([sce]): (.*)");
+			Pattern line = Pattern.compile("GPGChat:([sce]): (.*)", Pattern.DOTALL);
 			Matcher m = line.matcher(message);
 			if(m.matches())
 			{
@@ -222,8 +222,8 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	
 	private void processMessage(String content)
 	{
-		Pattern line = Pattern.compile("GPGChannelData:(\\w+): (.*)");
-		Pattern pgp = Pattern.compile("hello:\\s*[-]+BEGIN PGP MESSAGE[-]+.*[-]+END PGP MESSAGE[-]+");
+		Pattern line = Pattern.compile("GPGChannelData:(\\w+): (.*)", Pattern.DOTALL);
+		Pattern pgp = Pattern.compile("hello:\\s*[-]+BEGIN PGP MESSAGE[-]+.*[-]+END PGP MESSAGE[-]+", Pattern.DOTALL);
 		
 		Matcher lineMatcher = line.matcher(content);
 		if(lineMatcher.matches())
