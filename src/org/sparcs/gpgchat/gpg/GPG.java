@@ -13,6 +13,12 @@ import org.apache.commons.io.IOUtils;
 public class GPG {
 
 	private String gpg;
+	private Key myKey = null;
+	
+	public void setDefaultKey(Key key)
+	{
+		myKey = key;
+	}
 
 	private GPG(String gpg)
 	{
@@ -213,6 +219,8 @@ public class GPG {
 
 	public String encrypt(String message, List<Key> receivers, Key signKey)
 	{
+		if(signKey == null)
+			signKey = myKey;
 		try
 		{
 			List<String> list = new LinkedList<String>();
