@@ -38,7 +38,7 @@ public class Main {
 		}
 		while(in.hasNextLine())
 		{
-			if(irc.getChannel() != null)
+			if(irc.getChannel() == null)
 			{
 				irc.createChannel(null);
 			}
