@@ -33,6 +33,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	private Map<String, StringBuffer> channelBuffer;
 	private jerklib.Channel IRCChannel;
 	private GPG gpg;
+	private Channel myChannel = null;
 	MessageReceiver messageListener;
 	
 	private IRCInterface(GPG gpg, ConnectionManager conn, String channel, String initialMessage, MessageReceiver messageListener)
@@ -128,11 +129,17 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			Channel channel = Channel.createChannel(this, gpg);
 			channel.registerReceiver(this.messageListener);
 			channel.sendHello(gpg.getTruestedKey());
+			this.myChannel = channel;
 			return channel;
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	public Channel getChannel()
+	{
+		return myChannel;
 	}
 
 	@Override
@@ -223,7 +230,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	private void processMessage(String content)
 	{
 		Pattern line = Pattern.compile("GPGChannelData:(\\w+): (.*)", Pattern.DOTALL);
-		Pattern pgp = Pattern.compile("hello:\\s*[-]+BEGIN PGP MESSAGE[-]+.*[-]+END PGP MESSAGE[-]+", Pattern.DOTALL);
+		Pattern pgp = Pattern.compile("hello:.*", Pattern.DOTALL);
 		
 		Matcher lineMatcher = line.matcher(content);
 		if(lineMatcher.matches())

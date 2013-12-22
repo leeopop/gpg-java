@@ -38,15 +38,15 @@ public class Main {
 		IRCInterface irc = IRCInterface.getInstance(gpg, "irc.luatic.net", 6661, "#ella", null, new SimpleListener());
 		boolean first = true;
 		Scanner in = new Scanner(System.in);
-		Channel channel = null;
 		while(in.hasNextLine())
 		{
 			if(first)
 			{
 				first = false;
-				channel = irc.createChannel(null);
+				irc.createChannel(null);
 			}
-			channel.sendMessage(in.nextLine());
+			
+			irc.getChannel().sendMessage(in.nextLine());
 		}
 		in.close();
 		irc.close();
