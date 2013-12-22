@@ -82,7 +82,11 @@ public class GPG {
 		String message1 = gpg.encrypt(temp, all, me);
 		System.out.println(message1);
 		
-		System.out.println(gpg.decrypt(message1));
+		String[] ret = gpg.decrypt(message1);
+		System.out.println(ret[0]);
+		System.out.println(ret[1]);
+		System.out.println(ret[2]);
+		System.out.println(ret[3]);
 	}
 
 	public List<Key> getAllKeys()
@@ -249,7 +253,11 @@ public class GPG {
 		}
 	}
 	
-	public String decrypt(String message)
+	//String[0]: message
+	//String[1]: signer's key id
+	//String[2]: signer's name
+	//String[3]: signer's email
+	public String[] decrypt(String message)
 	{
 		try
 		{
@@ -271,7 +279,7 @@ public class GPG {
 			String key = null;
 			String signature = null;
 			String name = null;
-			String status = null;
+			String email = null;
 			while(in.hasNextLine())
 			{
 				String line = in.nextLine().trim();
@@ -298,6 +306,7 @@ public class GPG {
 					{
 						signature = m.group(1);
 						name = m.group(2);
+						email = m.group(3);
 						if(signature.equals("Good"))
 							state++;
 						else
@@ -315,7 +324,6 @@ public class GPG {
 					if(m.matches())
 					{
 						System.err.println(line);
-						status = m.group(1);
 						state=-1;
 					}
 					else
@@ -330,14 +338,17 @@ public class GPG {
 			
 			if(p.waitFor() == 0)
 			{
-				System.err.println(key);
-				System.err.println(signature);
-				System.err.println(name);
-				System.err.println(status);
 				if(state == -1)
 					return null;
 				else
-					return result;
+				{
+					String[] ret = new String[4];
+					ret[0] = result;
+					ret[1] = key;
+					ret[2] = name;
+					ret[3] = email;
+					return ret;
+				}
 			}
 			else
 				return null;
