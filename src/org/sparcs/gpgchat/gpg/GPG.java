@@ -82,7 +82,7 @@ public class GPG {
 		String message1 = gpg.encrypt(temp, all, me);
 		System.out.println(message1);
 		
-		System.out.println(gpg.verify(message1));
+		System.out.println(gpg.decrypt(message1));
 	}
 
 	public List<Key> getAllKeys()
@@ -249,7 +249,7 @@ public class GPG {
 		}
 	}
 	
-	public String verify(String message)
+	public String decrypt(String message)
 	{
 		try
 		{
