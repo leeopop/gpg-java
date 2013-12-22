@@ -15,8 +15,6 @@ import jerklib.events.JoinCompleteEvent;
 import jerklib.events.MessageEvent;
 import jerklib.listeners.IRCEventListener;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.binary.StringUtils;
 import org.sparcs.gpgchat.channel.Channel;
 import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.message.MessageInterface;

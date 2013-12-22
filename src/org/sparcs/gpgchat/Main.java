@@ -2,7 +2,6 @@ package org.sparcs.gpgchat;
 
 import java.util.Scanner;
 
-import org.sparcs.gpgchat.channel.Channel;
 import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.gpg.Key;
 import org.sparcs.gpgchat.message.MessageReceiver;
@@ -24,25 +23,23 @@ public class Main {
 	public static void main(String[] args) {
 		GPG gpg = GPG.getInstance(null);
 		
+		IRCInterface irc = IRCInterface.getInstance(gpg, "irc.luatic.net", 6661, "#ella", null, new SimpleListener());
+		Scanner in = new Scanner(System.in);
+		System.out.print("Your private key id: ");
+		String me = in.nextLine();
+		System.out.print("Other private key id: ");
+		String other = in.nextLine();
 		for(Key key : gpg.getAllKeys())
 		{
-			if(key.uid.equals("leeopop"))
-			{
+			if(key.uid.equals(me))
 				gpg.setDefaultKey(key);
-			}
-			if(key.uid.equals("elaborate"))
+			if(key.uid.equals(other))
 				gpg.addTrustedKey(key);
 		}
-		
-		
-		IRCInterface irc = IRCInterface.getInstance(gpg, "irc.luatic.net", 6661, "#ella", null, new SimpleListener());
-		boolean first = true;
-		Scanner in = new Scanner(System.in);
 		while(in.hasNextLine())
 		{
-			if(first)
+			if(irc.getChannel() != null)
 			{
-				first = false;
 				irc.createChannel(null);
 			}
 			
