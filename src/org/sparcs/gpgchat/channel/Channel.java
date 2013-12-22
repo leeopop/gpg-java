@@ -50,6 +50,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 	public Channel(MessageInterface messager, GPG gpg) {
 		try {
 			this.messager = messager;
+			messager.registerReceiver(this);
 			this.gpg = gpg;
 
 			Random r = new SecureRandom();
