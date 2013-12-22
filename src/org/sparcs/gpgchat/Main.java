@@ -15,7 +15,7 @@ public class Main {
 		@Override
 		public void receiveMessage(String message) {
 			// TODO Auto-generated method stub
-			System.err.println(message);
+			System.out.println(message);
 		}
 		
 	}

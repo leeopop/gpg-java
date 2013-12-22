@@ -222,27 +222,24 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 			break;
 		}
 	}
-	
+
 	private void processMessage(String content)
 	{
 		Pattern line = Pattern.compile("GPGChannelData:(\\w+): (.*)", Pattern.DOTALL);
 		Pattern pgp = Pattern.compile("hello:.*", Pattern.DOTALL);
-		
+
 		Matcher lineMatcher = line.matcher(content);
 		if(lineMatcher.matches())
 		{
 			String channelName = lineMatcher.group(1);
 			String channelData = lineMatcher.group(2);
-			
-			if(this.channelName == null)
+
+			Matcher pgpMatcher = pgp.matcher(channelData);
+			if(pgpMatcher.matches())
 			{
-				Matcher pgpMatcher = pgp.matcher(channelData);
-				if(pgpMatcher.matches())
-				{
-					this.createChannel(channelName);
-				}
+				this.createChannel(channelName);
 			}
-			
+
 			if(this.listener != null && this.channelName != null && this.channelName.equals(channelName))
 			{
 				this.listener.receiveMessage(channelData);
