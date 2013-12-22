@@ -130,10 +130,10 @@ public class Channel implements MessageInterface, MessageReceiver {
 		String keyStr = Base64.encodeBase64String(this.key);
 		String ivStr = Base64.encodeBase64String(this.ivKey);
 		String keyMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr);
-		String helloMessage = String.format(helloFormat, keyMessage);
+		String helloMessage = String.format(helloFormat, gpg.encrypt(keyMessage, receivers, null));
 		
 
-		this.messager.sendMessage(gpg.encrypt(helloMessage, receivers, null));
+		this.messager.sendMessage(helloMessage);
 	}
 
 	@Override

@@ -44,7 +44,7 @@ public class Main {
 			if(first)
 			{
 				first = false;
-				channel = irc.createChannel("AAAFF");
+				channel = irc.createChannel(null);
 			}
 			channel.sendMessage(in.nextLine());
 		}

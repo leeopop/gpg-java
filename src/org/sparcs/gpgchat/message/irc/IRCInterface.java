@@ -220,7 +220,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	private void processMessage(String content)
 	{
 		Pattern line = Pattern.compile("GPGChannelData:(\\w+): (.*)");
-		Pattern pgp = Pattern.compile("[-]+BEGIN PGP MESSAGE[-]+.*[-]+END PGP MESSAGE[-]+");
+		Pattern pgp = Pattern.compile("hello:\\s*[-]+BEGIN PGP MESSAGE[-]+.*[-]+END PGP MESSAGE[-]+");
 		
 		Matcher lineMatcher = line.matcher(content);
 		if(lineMatcher.matches())
