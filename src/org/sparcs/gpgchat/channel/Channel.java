@@ -33,7 +33,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 	public static String keyFormat = "%s:%s:%s";
 	public Pattern msgPattern = Pattern.compile("message:(\\w+):(\\w+)");
 	public Pattern keyPattern = Pattern.compile("(\\w+):(\\w+):(\\w+)");
-	public Pattern helloPattern = Pattern.compile("hello:(\\w+)");
+	public Pattern helloPattern = Pattern.compile("hello:(.+)");
 
 	private byte[] key = new byte[16];
 	private byte[] ivKey = new byte[16];
