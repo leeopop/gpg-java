@@ -29,7 +29,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 
 	public static String transformation = "AES/CBC/PKCS5Padding";
 	public static String msgFormat = "message:%s:%s";
-	public static String helloFormat = "hello:%s:%s";
+	public static String helloFormat = "hello:%s";
 	public static String keyFormat = "%s:%s:%s";
 	public Pattern msgPattern = Pattern.compile("message:(\\w+):(\\w+)");
 	public Pattern keyPattern = Pattern.compile("(\\w+):(\\w+):(\\w+)");
@@ -93,7 +93,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 		return userMap.decrypt(msg);
 	}
 
-	public void addUser(String encyptedHelloMessage) throws InvalidKeyException,
+	private void addUser(String encyptedHelloMessage) throws InvalidKeyException,
 			NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
 
 		Matcher helloMatcher = helloPattern.matcher(encyptedHelloMessage);
@@ -129,7 +129,9 @@ public class Channel implements MessageInterface, MessageReceiver {
 	public void sendHello(List<Key> receivers) {
 		String keyStr = Base64.encodeBase64String(this.key);
 		String ivStr = Base64.encodeBase64String(this.ivKey);
-		String helloMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr);
+		String keyMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr);
+		String helloMessage = String.format(helloFormat, keyMessage);
+		
 
 		this.messager.sendMessage(gpg.encrypt(helloMessage, receivers, null));
 	}
