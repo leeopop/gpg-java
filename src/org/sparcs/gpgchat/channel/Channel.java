@@ -91,6 +91,8 @@ public class Channel implements MessageInterface, MessageReceiver {
 		String msg = matcher.group(2);
 
 		UserKeyMap userMap = userKeyMap.get(fakeID);
+		if(userMap == null)
+			return null;
 		return userMap.realUsername + ": " + userMap.decrypt(msg);
 	}
 
@@ -140,7 +142,18 @@ public class Channel implements MessageInterface, MessageReceiver {
 	@Override
 	public void sendMessage(String message) {
 		try {
-			String encyptMessage = Base64.encodeBase64String(this.encrypter.doFinal(message.getBytes("UTF-8")));
+			byte[] encByte = this.encrypter.doFinal(message.getBytes("UTF-8"));
+			String encyptMessage = Base64.encodeBase64String(encByte);
+			
+			for(int k=0; k<ivKey.length; k++)
+			{
+				ivKey[k] = (byte) (ivKey[k] ^ encByte[k]);
+			}
+			
+			IvParameterSpec iv = new IvParameterSpec(ivKey);
+			SecretKeySpec k = new SecretKeySpec(key, "AES");
+			
+			this.encrypter.init(Cipher.ENCRYPT_MODE, k, iv);
 			this.messager.sendMessage(String.format(msgFormat, this.fakeID, encyptMessage));
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -187,6 +200,8 @@ public class Channel implements MessageInterface, MessageReceiver {
 class UserKeyMap {
 	String realUsername;
 	Cipher decrypter;
+	SecretKeySpec k;
+	IvParameterSpec iv;
 
 	public UserKeyMap(String username, byte[] userKey, byte[] ivKey)
 			throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
@@ -194,16 +209,26 @@ class UserKeyMap {
 
 		this.realUsername = username;
 		this.decrypter = Cipher.getInstance(Channel.transformation);
-		SecretKeySpec k = new SecretKeySpec(userKey, "AES");
-		IvParameterSpec iv = new IvParameterSpec(ivKey);
+		this.k = new SecretKeySpec(userKey, "AES");
+		this.iv = new IvParameterSpec(ivKey);
 		this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
 	}
 
 	public String decrypt(String encryptedMsg) throws IllegalBlockSizeException {
 		try {
-			byte[] decyptedByte = decrypter.doFinal(Base64.decodeBase64(encryptedMsg));
+			byte[] encByte = Base64.decodeBase64(encryptedMsg);
+			byte[] decyptedByte = decrypter.doFinal(encByte);
+			byte[] ivKey = iv.getIV();
+			for(int k=0; k<ivKey.length; k++)
+			{
+				ivKey[k] = (byte) (ivKey[k] ^ encByte[k]);
+			}
+			
+			iv = new IvParameterSpec(ivKey);
+			
+			this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
 			return new String(decyptedByte, "UTF-8");
-		} catch (BadPaddingException | UnsupportedEncodingException e) {
+		} catch (BadPaddingException | UnsupportedEncodingException | InvalidKeyException | InvalidAlgorithmParameterException e) {
 			return null;
 		}
 	}
