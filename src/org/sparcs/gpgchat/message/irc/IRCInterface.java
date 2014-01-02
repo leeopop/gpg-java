@@ -15,8 +15,6 @@ import jerklib.events.JoinCompleteEvent;
 import jerklib.events.MessageEvent;
 import jerklib.listeners.IRCEventListener;
 
-import org.sparcs.gpgchat.channel.Channel;
-import org.sparcs.gpgchat.gpg.GPG;
 import org.sparcs.gpgchat.message.MessageInterface;
 import org.sparcs.gpgchat.message.MessageReceiver;
 
@@ -27,26 +25,21 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	private String initialMessage;
 	private String IRCChannelName;
 	private MessageReceiver listener;
-	private String channelName;
 	private Map<String, StringBuffer> channelBuffer;
 	private jerklib.Channel IRCChannel;
-	private GPG gpg;
-	private Channel myChannel = null;
 	MessageReceiver messageListener;
 	
-	private IRCInterface(GPG gpg, ConnectionManager conn, String channel, String initialMessage, MessageReceiver messageListener)
+	private IRCInterface(ConnectionManager conn, String channel, String initialMessage, MessageReceiver messageListener)
 	{
 		this.conn = conn;
 		this.initialMessage = initialMessage;
 		this.IRCChannelName = channel;
 		this.channelBuffer = new HashMap<>();
 		this.listener = null;
-		this.channelName = null;
-		this.gpg = gpg;
 		this.messageListener = messageListener;
 	}
 	
-	public static IRCInterface getInstance(GPG gpg, String host, int port, String channelID, String initialMessage, MessageReceiver messageListener)
+	public static IRCInterface getInstance(String host, int port, String channelID, String initialMessage, MessageReceiver messageListener)
 	{
 		Random r = new SecureRandom();
 		String id = "a" + Long.toOctalString(r.nextLong());
@@ -57,7 +50,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 		else
 			session = conn.requestConnection(host);
 		
-		IRCInterface ret = new IRCInterface(gpg, conn, channelID, initialMessage, messageListener);
+		IRCInterface ret = new IRCInterface(conn, channelID, initialMessage, messageListener);
 		session.addIRCEventListener(ret);
 		return ret;
 	}
@@ -78,13 +71,7 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	
 	@Override
 	public synchronized void sendMessage(String message) {
-		if(this.channelName == null)
-		{
-			System.err.println("Channel not configured yet");
-			return;
-		}
-		message = "GPGChannelData:" + this.channelName + ": " + message;
-		message = message.replaceAll("[\r\n]+", "");
+		message = message.replaceAll("[\r\n]+", " ");
 		int remaining = message.length();
 		int current = 0;
 		while(remaining > 0)
@@ -112,32 +99,6 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 	@Override
 	public void registerReceiver(MessageReceiver receiver) {
 		this.listener = receiver;
-	}
-	
-	public Channel createChannel(String name)
-	{
-		if(name == null)
-		{
-			Random r = new SecureRandom();
-			this.channelName = Long.toHexString(r.nextLong());
-		}
-		else
-			this.channelName = name;
-		try {
-			Channel channel = Channel.createChannel(this, gpg);
-			channel.registerReceiver(this.messageListener);
-			channel.sendHello(gpg.getTruestedKey());
-			this.myChannel = channel;
-			return channel;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-	
-	public Channel getChannel()
-	{
-		return myChannel;
 	}
 
 	@Override
@@ -225,25 +186,11 @@ public class IRCInterface implements MessageInterface, IRCEventListener {
 
 	private void processMessage(String content)
 	{
-		Pattern line = Pattern.compile("GPGChannelData:(\\w+): (.*)", Pattern.DOTALL);
-		Pattern pgp = Pattern.compile("hello:.*", Pattern.DOTALL);
+		String channelData = content;
 
-		Matcher lineMatcher = line.matcher(content);
-		if(lineMatcher.matches())
+		if(this.listener != null)
 		{
-			String channelName = lineMatcher.group(1);
-			String channelData = lineMatcher.group(2);
-
-			Matcher pgpMatcher = pgp.matcher(channelData);
-			if(pgpMatcher.matches() && !channelName.equals(this.channelName))
-			{
-				this.createChannel(channelName);
-			}
-
-			if(this.listener != null && this.channelName != null && this.channelName.equals(channelName))
-			{
-				this.listener.receiveMessage(channelData);
-			}
+			this.listener.receiveMessage(channelData);
 		}
 	}
 }

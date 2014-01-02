@@ -20,7 +20,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 
+import org.sparcs.gpgchat.channel.Channel;
 import org.sparcs.gpgchat.gpg.GPG;
+import org.sparcs.gpgchat.message.MessageInterface;
 import org.sparcs.gpgchat.message.MessageReceiver;
 
 public class GUIChat implements MessageReceiver{
@@ -33,6 +35,8 @@ public class GUIChat implements MessageReceiver{
 	private DefaultListModel<String> showData;
 	private JTextField enterArea;
 	private int lastMax = 0;
+	private MessageInterface msg;
+	private Channel channel;
 	
 	/**
 	 * Launch the application.
@@ -114,6 +118,7 @@ public class GUIChat implements MessageReceiver{
 		
 		JPanel enter = new JPanel();
 		enterArea = new JTextField(50);
+		enterArea.setEnabled(false);
 		enterArea.addKeyListener(new KeyListener() {
 			
 			@Override
@@ -124,6 +129,7 @@ public class GUIChat implements MessageReceiver{
 					e.consume();
 					String text = me.enterArea.getText();
 					me.enterArea.setText("");
+					channel.sendMessage(text);
 					me.receiveMessage(gpg.getDefaultKey().uid + ": " + text);
 				}
 			}
@@ -140,18 +146,45 @@ public class GUIChat implements MessageReceiver{
 				
 			}
 		});
-		JButton enterButton = new JButton("Enter");
+		final JButton helloButton = new JButton("Hello");
+		helloButton.setEnabled(false);
+		helloButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				me.channel.sendHello(me.gpg.getTruestedKey());
+			}
+		});
+		final JButton enterButton = new JButton("Connect");
 		enterButton.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String text = me.enterArea.getText();
-				me.enterArea.setText("");
-				me.receiveMessage(gpg.getDefaultKey().uid + ": " + text);
+				if(me.enterArea.isEnabled())
+				{
+					String text = me.enterArea.getText();
+					me.enterArea.setText("");
+					channel.sendMessage(text);
+					me.receiveMessage(gpg.getDefaultKey().uid + ": " + text);
+				}
+				else
+				{
+					me.msg = me.networkDialog.getInterface(me);
+					if(msg != null)
+					{
+						me.enterArea.setEnabled(true);
+						channel = Channel.createChannel(me.msg, gpg);
+						channel.registerReceiver(me);
+						enterButton.setText("Enter");
+						helloButton.setEnabled(true);
+					}
+				}
 			}
 		});
+		
 		enter.add(enterArea);
 		enter.add(enterButton);
+		enter.add(helloButton);
 		frame.getContentPane().add(enter, BorderLayout.SOUTH);
 	}
 

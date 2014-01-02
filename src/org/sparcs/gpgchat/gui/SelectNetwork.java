@@ -1,31 +1,26 @@
 package org.sparcs.gpgchat.gui;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowStateListener;
-import java.util.LinkedList;
-import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
-import javax.swing.ScrollPaneConstants;
 import javax.swing.border.EmptyBorder;
-import javax.swing.JList;
 
-import org.sparcs.gpgchat.gpg.GPG;
-import org.sparcs.gpgchat.gpg.Key;
+import org.sparcs.gpgchat.message.MessageInterface;
+import org.sparcs.gpgchat.message.MessageReceiver;
+import org.sparcs.gpgchat.message.irc.IRCInterface;
 
 public class SelectNetwork extends JDialog {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private final JPanel contentPanel = new JPanel();
 	private final JPanel titlePanel = new JPanel();
 	
@@ -82,8 +77,8 @@ public class SelectNetwork extends JDialog {
 		getContentPane().add(buttonPane, BorderLayout.SOUTH);
 		final SelectNetwork me = this;
 		{
-			JButton okButton = new JButton("OK");
-			okButton.setActionCommand("OK");
+			JButton okButton = new JButton("Active");
+			okButton.setActionCommand("Active");
 			okButton.addActionListener(new ActionListener() {
 				
 				@Override
@@ -109,5 +104,10 @@ public class SelectNetwork extends JDialog {
 			});
 			buttonPane.add(cancelButton);
 		}
+	}
+	
+	public MessageInterface getInterface(MessageReceiver listener)
+	{
+		return IRCInterface.getInstance(this.server, Integer.parseInt(this.port), this.channel, null, listener);
 	}
 }
