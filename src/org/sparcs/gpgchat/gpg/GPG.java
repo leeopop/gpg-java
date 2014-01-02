@@ -21,6 +21,11 @@ public class GPG {
 		myKey = key;
 	}
 	
+	public Key getDefaultKey()
+	{
+		return myKey;
+	}
+	
 	public void setTrustedKey(List<Key> keys)
 	{
 		this.trust.clear();

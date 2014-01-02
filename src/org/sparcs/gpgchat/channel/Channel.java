@@ -91,7 +91,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 		String msg = matcher.group(2);
 
 		UserKeyMap userMap = userKeyMap.get(fakeID);
-		return userMap.decrypt(msg);
+		return userMap.realUsername + ": " + userMap.decrypt(msg);
 	}
 
 	private void addUser(String encyptedHelloMessage) throws InvalidKeyException,
