@@ -76,7 +76,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 		return new Channel(messager, gpg);
 	}
 
-	public String decryptMessage(String message) throws IllegalBlockSizeException {
+	public String decryptMessage(String message) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
 
 		if (message == null) {
 			return null;
@@ -176,7 +176,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 				} else {
 					this.receiver.receiveMessage(msg);
 				}
-			} catch (IllegalBlockSizeException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		} else if (message.startsWith("hello")) {
@@ -214,7 +214,7 @@ class UserKeyMap {
 		this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
 	}
 
-	public String decrypt(String encryptedMsg) throws IllegalBlockSizeException {
+	public String decrypt(String encryptedMsg) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
 		try {
 			byte[] encByte = Base64.decodeBase64(encryptedMsg);
 			byte[] decyptedByte = decrypter.doFinal(encByte);
@@ -231,6 +231,7 @@ class UserKeyMap {
 			this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
 			return new String(decyptedByte, "UTF-8");
 		} catch (BadPaddingException | UnsupportedEncodingException | InvalidKeyException | InvalidAlgorithmParameterException e) {
+			this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
 			return null;
 		}
 	}
