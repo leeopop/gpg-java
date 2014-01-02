@@ -218,6 +218,8 @@ class UserKeyMap {
 		try {
 			byte[] encByte = Base64.decodeBase64(encryptedMsg);
 			byte[] decyptedByte = decrypter.doFinal(encByte);
+			if(encByte == null || decyptedByte == null)
+				return null;
 			byte[] ivKey = iv.getIV();
 			for(int k=0; k<ivKey.length; k++)
 			{
