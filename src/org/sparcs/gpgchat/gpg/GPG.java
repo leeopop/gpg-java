@@ -21,9 +21,10 @@ public class GPG {
 		myKey = key;
 	}
 	
-	public void addTrustedKey(Key key)
+	public void setTrustedKey(List<Key> keys)
 	{
-		this.trust.add(key);
+		this.trust.clear();
+		this.trust.addAll(keys);
 	}
 
 	public List<Key> getTruestedKey()

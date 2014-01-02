@@ -1,5 +1,7 @@
 package org.sparcs.gpgchat;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Scanner;
 
 import org.sparcs.gpgchat.gpg.GPG;
@@ -34,7 +36,11 @@ public class Main {
 			if(key.uid.equals(me))
 				gpg.setDefaultKey(key);
 			if(key.uid.equals(other))
-				gpg.addTrustedKey(key);
+			{
+				List<Key> trusts = new LinkedList<>();
+				trusts.add(key);
+				gpg.setTrustedKey(trusts);
+			}
 		}
 		while(in.hasNextLine())
 		{

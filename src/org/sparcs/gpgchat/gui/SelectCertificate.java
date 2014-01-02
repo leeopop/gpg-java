@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.JButton;
@@ -30,13 +31,15 @@ public class SelectCertificate extends JDialog {
 	private List<Key> secretKeys;
 	private List<Key> publicKeys;
 	private boolean confirm = false;
+	private JList<String> publicList;
+	private JList<String> privateList;
 	
 	private Object lock = new Object();
 
 	/**
 	 * Create the dialog.
 	 */
-	public SelectCertificate(GPG gpg) {
+	public SelectCertificate(final GPG gpg) {
 		setBounds(100, 100, 400, 400);
 		getContentPane().setLayout(new BorderLayout());
 		titlePanel.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -62,9 +65,9 @@ public class SelectCertificate extends JDialog {
 				data[k] = "" +  key.uid + " <" + key.email + "> " + key.keyID;
 			}
 			
-			JList<String> list = new JList<>(data);
-			list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-			JScrollPane pane = new JScrollPane(list);
+			privateList = new JList<>(data);
+			privateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+			JScrollPane pane = new JScrollPane(privateList);
 			pane.setPreferredSize(new Dimension(150, 250));
 			contentPanel.add(pane);
 		}
@@ -77,9 +80,9 @@ public class SelectCertificate extends JDialog {
 				data[k] = "" +  key.uid + " <" + key.email + "> " + key.keyID;
 			}
 			
-			JList<String> list = new JList<>(data);
-			list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-			JScrollPane pane = new JScrollPane(list);
+			publicList = new JList<>(data);
+			publicList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+			JScrollPane pane = new JScrollPane(publicList);
 			pane.setPreferredSize(new Dimension(150, 250));
 			contentPanel.add(pane);
 		}
@@ -96,6 +99,15 @@ public class SelectCertificate extends JDialog {
 					@Override
 					public void actionPerformed(ActionEvent arg0) {
 						me.confirm = true;
+						Key privateKey = secretKeys.get(me.privateList.getSelectedIndex());
+						gpg.setDefaultKey(privateKey);
+						
+						List<Key> trusts = new LinkedList<>();
+						for(int idx : me.publicList.getSelectedIndices())
+						{
+							trusts.add(publicKeys.get(idx));
+						}
+						gpg.setTrustedKey(trusts);
 						me.dispose();
 					}
 				});
