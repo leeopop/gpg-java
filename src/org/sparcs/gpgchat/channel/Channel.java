@@ -29,10 +29,12 @@ import org.sparcs.gpgchat.message.MessageReceiver;
 public class Channel implements MessageInterface, MessageReceiver {
 
 	public static String transformation = "AES/CBC/PKCS5Padding";
-	public static String msgFormat = "message:%s:%s";
+	public static String msgFormat = "%s:%s:%s";
 	public static String helloFormat = "hello:%s";
 	public static String keyFormat = "%s:%s:%s";
 	public Pattern msgPattern = Pattern.compile("message:([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
+	public Pattern askPattern = Pattern.compile("ask:([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
+	public Pattern ansPattern = Pattern.compile("ans:([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
 	public Pattern keyPattern = Pattern.compile("([^:\\s]+):([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
 	public Pattern helloPattern = Pattern.compile("hello:(.+)", Pattern.DOTALL);
 
@@ -45,12 +47,24 @@ public class Channel implements MessageInterface, MessageReceiver {
 
 	private MessageInterface messager;
 	private MessageReceiver receiver;
+	private MessageReceiver systemInfo;
 
 	private Map<String, UserKeyMap> userKeyMap = new HashMap<String, UserKeyMap>();
+	
+	private String challenge;
+	private void newChallenge()
+	{
+		byte[] temp = new byte[16];
+		Random r = new SecureRandom();
+		r.nextBytes(temp);
+		this.challenge = Base64.encodeBase64String(temp);
+	}
 
-	public Channel(MessageInterface messager, GPG gpg) {
+	
+	public Channel(MessageInterface messager, GPG gpg, MessageReceiver system) {
 		try {
 			this.messager = messager;
+			this.systemInfo = system;
 			messager.registerReceiver(this);
 			this.gpg = gpg;
 
@@ -66,6 +80,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 			this.encrypter.init(Cipher.ENCRYPT_MODE, k, iv);
 
 			this.fakeID = Long.toHexString(r.nextLong());
+			newChallenge();
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -73,7 +88,18 @@ public class Channel implements MessageInterface, MessageReceiver {
 	}
 
 	public static Channel createChannel(MessageInterface messager, GPG gpg) {
-		return new Channel(messager, gpg);
+		return new Channel(messager, gpg, new MessageReceiver() {
+			
+			@Override
+			public void receiveMessage(String message) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
+	}
+	
+	public static Channel createChannel(MessageInterface messager, GPG gpg, MessageReceiver system) {
+		return new Channel(messager, gpg, system);
 	}
 
 	public String decryptMessage(String message) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
@@ -93,7 +119,72 @@ public class Channel implements MessageInterface, MessageReceiver {
 		UserKeyMap userMap = userKeyMap.get(fakeID);
 		if(userMap == null)
 			return null;
+		if(!userMap.isTrusted)
+		{
+			systemInfo.receiveMessage("[WARNING] Unverified message, this message may be a duplicated copy of previous messages.");
+			sendAsk();
+		}
 		return userMap.realUsername + ": " + userMap.decrypt(msg);
+	}
+	
+	public void decryptAns(String message) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
+
+		if (message == null) {
+			return;
+		}
+
+		Matcher matcher = ansPattern.matcher(message);
+		if (!matcher.find()) {
+			return;
+		}
+
+		String fakeID = matcher.group(1);
+		String msg = matcher.group(2);
+
+		UserKeyMap userMap = userKeyMap.get(fakeID);
+		if(userMap == null)
+			return;
+		if(userMap.isTrusted)
+			return;
+		String ans = userMap.decrypt(msg);
+		if(ans == null)
+			return;
+		
+		if(!ans.equals(this.challenge))
+			return;
+		userMap.isTrusted = true;
+		
+		systemInfo.receiveMessage(userMap.realUsername + " has been trusted.");
+	}
+	
+	public void replyAsk(String message) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
+
+		if (message == null) {
+			return;
+		}
+
+		Matcher matcher = askPattern.matcher(message);
+		if (!matcher.find()) {
+			return;
+		}
+
+		String fakeID = matcher.group(1);
+		String msg = matcher.group(2);
+
+		UserKeyMap userMap = userKeyMap.get(fakeID);
+		if(userMap == null)
+			return;
+		String ans = userMap.decrypt(msg);
+		if(ans == null)
+			return;
+		sendMessage("ans", ans);
+		
+		systemInfo.receiveMessage("replied to " + userMap.realUsername + "'s message.");
+	}
+	
+	public void sendAsk() throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
+		newChallenge();
+		sendMessage("ask", this.challenge);
 	}
 
 	private void addUser(String encyptedHelloMessage) throws InvalidKeyException,
@@ -126,7 +217,11 @@ public class Channel implements MessageInterface, MessageReceiver {
 		byte[] ivKey = Base64.decodeBase64(ivStr);
 
 		UserKeyMap userMapKey = new UserKeyMap(realName, userKey, ivKey);
-		userKeyMap.put(fakeID, userMapKey);
+		if(!userKeyMap.containsKey(fakeID))
+		{
+			systemInfo.receiveMessage(userMapKey.realUsername + " with fake ID " + fakeID + " sent a hello message.");
+			userKeyMap.put(fakeID, userMapKey);
+		}
 	}
 
 	public void sendHello(List<Key> receivers) {
@@ -141,6 +236,10 @@ public class Channel implements MessageInterface, MessageReceiver {
 
 	@Override
 	public void sendMessage(String message) {
+		sendMessage("message", message);
+	}
+	
+	private void sendMessage(String type, String message) {
 		try {
 			byte[] encByte = this.encrypter.doFinal(message.getBytes("UTF-8"));
 			String encyptMessage = Base64.encodeBase64String(encByte);
@@ -154,7 +253,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 			SecretKeySpec k = new SecretKeySpec(key, "AES");
 			
 			this.encrypter.init(Cipher.ENCRYPT_MODE, k, iv);
-			this.messager.sendMessage(String.format(msgFormat, this.fakeID, encyptMessage));
+			this.messager.sendMessage(String.format(msgFormat, type, this.fakeID, encyptMessage));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -179,7 +278,20 @@ public class Channel implements MessageInterface, MessageReceiver {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-		} else if (message.startsWith("hello")) {
+		} else if(message.startsWith("ask")) {
+			try {
+				replyAsk(message);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else if(message.startsWith("ans")) {
+			try {
+				decryptAns(message);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		else if (message.startsWith("hello")) {
 			try {
 				addUser(message);
 			} catch (Exception e) {
@@ -202,11 +314,15 @@ class UserKeyMap {
 	Cipher decrypter;
 	SecretKeySpec k;
 	IvParameterSpec iv;
+	boolean isTrusted;
+	int failed;
 
 	public UserKeyMap(String username, byte[] userKey, byte[] ivKey)
 			throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
 			InvalidAlgorithmParameterException {
 
+		this.isTrusted = false;
+		this.failed = 0;
 		this.realUsername = username;
 		this.decrypter = Cipher.getInstance(Channel.transformation);
 		this.k = new SecretKeySpec(userKey, "AES");

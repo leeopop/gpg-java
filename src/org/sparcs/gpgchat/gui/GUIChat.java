@@ -61,6 +61,17 @@ public class GUIChat implements MessageReceiver{
 	public GUIChat() {
 		initialize();
 	}
+	
+	private class SystemInfo implements MessageReceiver
+	{
+
+		@Override
+		public void receiveMessage(String message) {
+			showData.addElement("#SYSTEM: " + message.trim());
+			showList.repaint();
+		}
+		
+	}
 
 	/**
 	 * Initialize the contents of the frame.
@@ -173,7 +184,7 @@ public class GUIChat implements MessageReceiver{
 					if(msg != null)
 					{
 						me.enterArea.setEnabled(true);
-						channel = Channel.createChannel(me.msg, gpg);
+						channel = Channel.createChannel(me.msg, gpg, new SystemInfo());
 						channel.registerReceiver(me);
 						enterButton.setText("Enter");
 						helloButton.setEnabled(true);
@@ -191,5 +202,6 @@ public class GUIChat implements MessageReceiver{
 	@Override
 	public void receiveMessage(String message) {
 		showData.addElement(message);
+		showList.repaint();
 	}
 }
