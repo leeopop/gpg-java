@@ -119,12 +119,14 @@ public class Channel implements MessageInterface, MessageReceiver {
 		UserKeyMap userMap = userKeyMap.get(fakeID);
 		if(userMap == null)
 			return null;
+		String start = userMap.realUsername;
 		if(!userMap.isTrusted)
 		{
-			systemInfo.receiveMessage("[WARNING] Unverified message, this message may be a duplicated copy of previous messages.");
+			//systemInfo.receiveMessage("[WARNING] Unverified message, this message may be a duplicated copy of previous messages.");
 			sendAsk();
+			start = "[Untrusted] " + start;
 		}
-		return userMap.realUsername + ": " + userMap.decrypt(msg);
+		return start + ": " + userMap.decrypt(msg);
 	}
 	
 	private void decryptAns(String message) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
@@ -144,10 +146,12 @@ public class Channel implements MessageInterface, MessageReceiver {
 		UserKeyMap userMap = userKeyMap.get(fakeID);
 		if(userMap == null)
 			return;
-		if(userMap.isTrusted)
-			return;
+		
 		String ans = userMap.decrypt(msg);
 		if(ans == null)
+			return;
+		
+		if(userMap.isTrusted || this.challenge == null)
 			return;
 		
 		if(!ans.equals(this.challenge))
@@ -179,7 +183,7 @@ public class Channel implements MessageInterface, MessageReceiver {
 			return;
 		sendMessage("ans", ans);
 		
-		systemInfo.receiveMessage("replied to " + userMap.realUsername + "'s message.");
+		//systemInfo.receiveMessage("replied to " + userMap.realUsername + "'s message.");
 	}
 	
 	private void sendAsk() throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {

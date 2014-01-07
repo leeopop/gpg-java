@@ -11,6 +11,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 import javax.swing.DefaultListModel;
+import javax.swing.DefaultListSelectionModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JList;
@@ -61,17 +62,6 @@ public class GUIChat implements MessageReceiver{
 	public GUIChat() {
 		initialize();
 	}
-	
-	private class SystemInfo implements MessageReceiver
-	{
-
-		@Override
-		public void receiveMessage(String message) {
-			showData.addElement("#SYSTEM: " + message.trim());
-			showList.repaint();
-		}
-		
-	}
 
 	/**
 	 * Initialize the contents of the frame.
@@ -111,6 +101,14 @@ public class GUIChat implements MessageReceiver{
 		
 		showData = new DefaultListModel<>();
 		showList = new JList<>(showData);
+		showList.setSelectionModel(new DefaultListSelectionModel(){
+			private static final long serialVersionUID = 1L;
+
+		    @Override
+		    public void setSelectionInterval(int index0, int index1) {
+		        super.setSelectionInterval(-1, -1);
+		    }
+		});
 		showList.setAutoscrolls(true);
 		JScrollPane scrollPane = new JScrollPane(showList);
 		scrollPane.setPreferredSize(new Dimension(700, 500));
@@ -184,7 +182,7 @@ public class GUIChat implements MessageReceiver{
 					if(msg != null)
 					{
 						me.enterArea.setEnabled(true);
-						channel = Channel.createChannel(me.msg, gpg, new SystemInfo());
+						channel = Channel.createChannel(me.msg, gpg, me);
 						channel.registerReceiver(me);
 						enterButton.setText("Enter");
 						helloButton.setEnabled(true);
@@ -200,8 +198,7 @@ public class GUIChat implements MessageReceiver{
 	}
 
 	@Override
-	public void receiveMessage(String message) {
+	public synchronized void receiveMessage(String message) {
 		showData.addElement(message);
-		showList.repaint();
 	}
 }
