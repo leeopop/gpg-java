@@ -1,6 +1,5 @@
 package org.sparcs.gpgchat.channel;
 
-import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -12,7 +11,6 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -31,15 +29,16 @@ public class Channel implements MessageInterface, MessageReceiver {
 	public static String transformation = "AES/CBC/PKCS5Padding";
 	public static String msgFormat = "%s:%s:%s";
 	public static String helloFormat = "hello:%s";
-	public static String keyFormat = "%s:%s:%s";
+	public static String keyFormat = "%s:%s:%s:%s";
 	public Pattern msgPattern = Pattern.compile("message:([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
 	public Pattern askPattern = Pattern.compile("ask:([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
 	public Pattern ansPattern = Pattern.compile("ans:([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
-	public Pattern keyPattern = Pattern.compile("([^:\\s]+):([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
+	public Pattern keyPattern = Pattern.compile("([^:\\s]+):([^:\\s]+):([^:\\s]+):([^:\\s]+)", Pattern.DOTALL);
 	public Pattern helloPattern = Pattern.compile("hello:(.+)", Pattern.DOTALL);
 
 	private byte[] key = new byte[16];
 	private byte[] ivKey = new byte[16];
+	private byte[] verification = new byte[16];
 	private Cipher encrypter;
 	private String fakeID;
 
@@ -69,8 +68,10 @@ public class Channel implements MessageInterface, MessageReceiver {
 			this.gpg = gpg;
 
 			Random r = new SecureRandom();
+			
 			r.nextBytes(key);
 			r.nextBytes(ivKey);
+			r.nextBytes(verification);
 
 			this.encrypter = Cipher.getInstance(transformation);
 			
@@ -126,7 +127,11 @@ public class Channel implements MessageInterface, MessageReceiver {
 			sendAsk();
 			start = "[Untrusted] " + start;
 		}
-		return start + ": " + userMap.decrypt(msg);
+		String decryptedMessage = userMap.decrypt(msg);
+		if(decryptedMessage == null)
+			return null;
+		else
+			return start + ": " + decryptedMessage;
 	}
 	
 	private void decryptAns(String message) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
@@ -216,11 +221,13 @@ public class Channel implements MessageInterface, MessageReceiver {
 		String fakeID = keyMatcher.group(1);
 		String userKeyStr = keyMatcher.group(2);
 		String ivStr = keyMatcher.group(3);
+		String verificationString = keyMatcher.group(4);
 		String realName = gpgProfile[2];
 		byte[] userKey = Base64.decodeBase64(userKeyStr);
 		byte[] ivKey = Base64.decodeBase64(ivStr);
+		byte[] verify = Base64.decodeBase64(verificationString);
 
-		UserKeyMap userMapKey = new UserKeyMap(realName, userKey, ivKey);
+		UserKeyMap userMapKey = new UserKeyMap(realName, userKey, ivKey, verify);
 		if(!userKeyMap.containsKey(fakeID))
 		{
 			systemInfo.receiveMessage(userMapKey.realUsername + " with fake ID " + fakeID + " sent a hello message.");
@@ -231,7 +238,8 @@ public class Channel implements MessageInterface, MessageReceiver {
 	public synchronized void sendHello(List<Key> receivers) {
 		String keyStr = Base64.encodeBase64String(this.key);
 		String ivStr = Base64.encodeBase64String(this.ivKey);
-		String keyMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr);
+		String verifiString = Base64.encodeBase64String(verification);
+		String keyMessage = String.format(keyFormat, this.fakeID, keyStr, ivStr, verifiString);
 		String helloMessage = String.format(helloFormat, Base64.encodeBase64String(StringUtils.getBytesUtf8(gpg.encrypt(keyMessage, receivers, null))));
 		
 
@@ -245,7 +253,16 @@ public class Channel implements MessageInterface, MessageReceiver {
 	
 	private void sendMessage(String type, String message) {
 		try {
-			byte[] encByte = this.encrypter.doFinal(message.getBytes("UTF-8"));
+			byte[] rawByte = message.getBytes("UTF-8");
+			byte[] total = new byte[verification.length + rawByte.length];
+			
+			for(int k=0; k<verification.length; k++)
+				total[k] = verification[k];
+			
+			for(int k=0; k<rawByte.length; k++)
+				total[k+verification.length] = rawByte[k];
+			
+			byte[] encByte = this.encrypter.doFinal(total);
 			String encyptMessage = Base64.encodeBase64String(encByte);
 			
 			for(int k=0; k<ivKey.length; k++)
@@ -317,9 +334,10 @@ public class Channel implements MessageInterface, MessageReceiver {
 		SecretKeySpec k;
 		IvParameterSpec iv;
 		boolean isTrusted;
+		byte[] verify;
 		//int failed;
 
-		public UserKeyMap(String username, byte[] userKey, byte[] ivKey)
+		public UserKeyMap(String username, byte[] userKey, byte[] ivKey, byte[] verify)
 				throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
 				InvalidAlgorithmParameterException {
 
@@ -330,9 +348,10 @@ public class Channel implements MessageInterface, MessageReceiver {
 			this.k = new SecretKeySpec(userKey, "AES");
 			this.iv = new IvParameterSpec(ivKey);
 			this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
+			this.verify = verify;
 		}
 
-		public String decrypt(String encryptedMsg) throws IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
+		public String decrypt(String encryptedMsg) throws InvalidKeyException, InvalidAlgorithmParameterException {
 			try {
 				byte[] encByte = Base64.decodeBase64(encryptedMsg);
 				byte[] decyptedByte = decrypter.doFinal(encByte);
@@ -344,15 +363,21 @@ public class Channel implements MessageInterface, MessageReceiver {
 					ivKey[k] = (byte) (ivKey[k] ^ encByte[k]);
 				}
 				
-				IvParameterSpec iv = new IvParameterSpec(ivKey);
-				this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
-
-				String ret = new String(decyptedByte, "UTF-8");
-				this.iv = iv;
+				for(int k=0; k<verify.length; k++)
+				{
+					if(decyptedByte[k] != verify[k])
+						return null;
+				}
+				
+				String ret = new String(decyptedByte, verify.length, decyptedByte.length-verify.length, "UTF-8");
+				this.iv = new IvParameterSpec(ivKey);
 				return ret;
-			} catch (BadPaddingException | UnsupportedEncodingException | InvalidKeyException | InvalidAlgorithmParameterException e) {
-				this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
+			} catch (Exception e) {
 				return null;
+			}
+			finally
+			{
+				this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
 			}
 		}
 	}
