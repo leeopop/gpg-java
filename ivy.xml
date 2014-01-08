@@ -17,6 +17,8 @@
 	<dependencies>
 		<dependency org="commons-codec" name="commons-codec" rev="1.8"/>
 		<dependency org="commons-io" name="commons-io" rev="2.4"/>
+		<dependency org="org.bouncycastle" name="bcprov-jdk16" rev="1.46"/>
+		<dependency org="org.bouncycastle" name="bcpg-jdk16" rev="1.46"/>
 	</dependencies>
 
 </ivy-module>

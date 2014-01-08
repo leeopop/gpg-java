@@ -344,10 +344,12 @@ public class Channel implements MessageInterface, MessageReceiver {
 					ivKey[k] = (byte) (ivKey[k] ^ encByte[k]);
 				}
 				
-				iv = new IvParameterSpec(ivKey);
-				
+				IvParameterSpec iv = new IvParameterSpec(ivKey);
 				this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
-				return new String(decyptedByte, "UTF-8");
+
+				String ret = new String(decyptedByte, "UTF-8");
+				this.iv = iv;
+				return ret;
 			} catch (BadPaddingException | UnsupportedEncodingException | InvalidKeyException | InvalidAlgorithmParameterException e) {
 				this.decrypter.init(Cipher.DECRYPT_MODE, k, iv);
 				return null;
